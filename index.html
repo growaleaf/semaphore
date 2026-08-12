@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Semaphore</title>
+<meta name="description" content="1805. You keep a hilltop relay station. Read the flags, resend them onward, and find out what the coast made of your chain." />
+<meta property="og:title" content="Semaphore" />
+<meta property="og:description" content="You are one link in a chain of flag stations. Your errors don't fail the level — they sail on to the coast." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9A%A9%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --fog: #7d8896;
+    --fog-dark: #1c232b;
+    --paper: #e9e4d6;
+    --paper-dim: #b9b2a0;
+    --signal: #c0392b;
+    --signal-dim: #8a4a42;
+    --brass: #c9a961;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--fog-dark);
+    color: var(--paper);
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  body { display: flex; justify-content: center; min-height: 100dvh; }
+  #app {
+    width: 100%; max-width: 480px; min-height: 100dvh;
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, #33404c 0%, #232c35 55%, #171e24 100%);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    position: relative; overflow: hidden;
+  }
+  .screen { display: flex; flex-direction: column; flex: 1; padding: 22px 18px; }
+  .hidden { display: none !important; }
+
+  h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: 0.02em; }
+  .kicker { color: var(--paper-dim); font-size: 0.95rem; margin-bottom: 20px; font-style: italic; }
+  p { line-height: 1.5; color: var(--paper-dim); }
+  .spacer { flex: 1; }
+
+  button {
+    font-family: inherit; font-size: 1rem; border: none; border-radius: 9px;
+    padding: 13px 18px; cursor: pointer; color: var(--fog-dark);
+    background: var(--brass); font-weight: bold;
+  }
+  button.secondary { background: transparent; color: var(--paper); border: 1px solid var(--paper-dim); font-weight: normal; }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; }
+
+  #screen-title { justify-content: center; align-items: center; text-align: center; }
+  #screen-title .flag-glyph { font-size: 1.6rem; }
+  #screen-title .true-note { font-size: 0.78rem; color: var(--paper-dim); margin-top: 26px; max-width: 320px; }
+
+  #screen-howto ul { padding-left: 20px; color: var(--paper-dim); line-height: 1.6; }
+  #screen-howto li { margin-bottom: 8px; }
+  #howto-diagrams { display: flex; gap: 10px; justify-content: center; margin: 8px 0 16px; }
+  #howto-diagrams canvas { background: rgba(255,255,255,0.03); border-radius: 8px; }
+  .diagram-label { text-align: center; font-size: 0.85rem; color: var(--paper-dim); margin-top: 2px; }
+
+  #screen-play { padding: 14px 14px; }
+  .hud { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.82rem; color: var(--paper-dim); margin-bottom: 6px; }
+  #hud-day { color: var(--paper); font-weight: bold; }
+  #hud-phase { font-size: 0.8rem; color: var(--paper-dim); font-style: italic; margin-bottom: 10px; min-height: 1.2em; }
+
+  #station-wrap { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid #4a5763; background: rgba(0,0,0,0.15); }
+  #station { display: block; width: 100%; height: auto; }
+
+  #timer-bar-wrap { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin: 10px 0; overflow: hidden; }
+  #timer-bar { height: 100%; background: var(--signal); width: 100%; transition: width 0.08s linear; }
+
+  #transcript-strip { min-height: 1.6em; font-size: 1.1rem; letter-spacing: 0.15em; text-align: center; color: var(--brass); margin-bottom: 8px; }
+
+  #letter-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 4px; }
+  #letter-grid button { padding: 10px 0; font-size: 0.95rem; background: rgba(233,228,214,0.1); color: var(--paper); border: 1px solid #4a5763; }
+  #letter-grid button:active { background: var(--brass); color: var(--fog-dark); }
+
+  #resend-body { text-align: center; }
+  #resend-message { font-size: 1.4rem; letter-spacing: 0.12em; margin: 14px 0; color: var(--paper); }
+
+  #screen-dispatch { justify-content: center; }
+  #dispatch-title { font-size: 1.4rem; margin-bottom: 6px; }
+  #dispatch-body { color: var(--paper); }
+  #dispatch-fidelity { color: var(--paper-dim); font-size: 0.9rem; margin-top: 4px; }
+  #dispatch-share {
+    width: 100%; margin-top: 14px; padding: 10px; border-radius: 8px;
+    background: rgba(0,0,0,0.25); color: var(--paper-dim); border: 1px solid #4a5763;
+    font-family: inherit; font-size: 0.82rem; resize: none;
+  }
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .row button { flex: 1; }
+
+  #screen-campaign-done { justify-content: center; align-items: center; text-align: center; }
+
+  a.link { color: var(--brass); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-title" class="screen">
+    <!-- slop-lint: allow SLOP003 - decorative glyph beside the title text it doesn't replace -->
+    <h1><span class="flag-glyph">🚩</span> Semaphore</h1>
+    <p class="kicker">1805. You keep a hilltop relay station in a chain of signal towers. Read what arrives. Send it on. Find out what the coast made of it.</p>
+    <button id="btn-start">Take the watch</button>
+    <p class="true-note">This uses the real flag semaphore alphabet — the one signallers actually used. By day fourteen you may be able to read it off a real flag.</p>
+  </section>
+
+  <section id="screen-howto" class="screen hidden">
+    <h1>How this goes</h1>
+    <p class="kicker">Two arms, eight positions each. That's the whole alphabet.</p>
+    <div id="howto-diagrams"></div>
+    <ul>
+      <li>A message arrives letter by letter through your telescope. Tap the letter you believe you saw before your time runs out.</li>
+      <li>Fog and failing light blur the arms. If you misread a letter, you won't know it — you'll simply send the wrong one.</li>
+      <li>Once you've read the whole message, you set your own arms and send it onward, under the same clock.</li>
+      <li>Your message then passes through other stations on its way to the coast. They have their own eyes, and their own fog.</li>
+      <li>Nothing here fails you outright. A garbled message just keeps going — and the dispatch reads back whatever the chain, including you, made of it.</li>
+      <li>Fourteen days, worsening weather, one crisis night.</li>
+    </ul>
+    <div class="spacer"></div>
+    <button id="btn-howto-play">Climb the tower</button>
+  </section>
+
+  <section id="screen-play" class="screen hidden">
+    <div class="hud">
+      <span id="hud-day">Day 1 of 14</span>
+      <span id="hud-weather">clear</span>
+    </div>
+    <div id="hud-phase">Watching the incoming station.</div>
+    <div id="station-wrap"><canvas id="station" width="420" height="220"></canvas></div>
+    <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+    <div id="transcript-strip"></div>
+    <div id="letter-grid"></div>
+    <div id="resend-body" class="hidden">
+      <p class="kicker">This is what you believe the message says. Send it.</p>
+      <div id="resend-message"></div>
+      <button id="btn-send">Send onward</button>
+    </div>
+  </section>
+
+  <section id="screen-dispatch" class="screen hidden">
+    <h1 id="dispatch-title">The coast replies</h1>
+    <p id="dispatch-body"></p>
+    <p id="dispatch-fidelity"></p>
+    <textarea id="dispatch-share" rows="3" readonly></textarea>
+    <div class="row">
+      <button class="secondary" id="btn-copy">Copy</button>
+      <button id="btn-next">Next day</button>
+    </div>
+  </section>
+
+  <section id="screen-campaign-done" class="screen hidden">
+    <h1>Fourteen days kept.</h1>
+    <p id="campaign-summary"></p>
+    <button id="btn-restart">Stand a new watch</button>
+  </section>
+
+</div>
+<script type="module">
+  import { initGame } from './game.js';
+  initGame(document.getElementById('app'));
+</script>
+</body>
+</html>
